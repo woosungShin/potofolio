@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- スタイルシっト -->
+    <style>
+        .div_base {
+            display: inline-block;
+        }
+        #title_div {
+            border: 1px solid black;
+            width: 913px;
+            height: 40px;
+            color: white;
+            font-size: x-large;
+            text-align: center;
+            background-color: darkblue;
+        }
+        .div_with_whole_width {
+            border: 1px solid black;
+            width: 913px;
+            height: 50px;
+        }
+        .human_img {
+            border: 1px solid black;
+            width: 300px;
+            height: 300px;
+        }
+        .computer_img {
+            border: 1px solid black;
+            width: 300px;
+            height: 300px;
+        }
+        .status {
+            width: 300px;
+            height: 30px;
+            border: 1px solid black;
+            font-size: large;
+            color: white;
+            text-align: center;
+        }
+        .title_img {
+            width: 300px;
+            background: antiquewhite;
+            vertical-align: middle;
+            text-align: center;
+            display: table-cell;
+        }
+        #result_div {
+            color: blue;
+            font-size: xx-large;
+            text-align: center;
+        }
+        #timer_div {
+            color: red;
+            font-size: xx-large;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- タイトル[1] -->
+<div id="title_div">
+  じゃん挙をしましょう〜
+</div>
+
+<!-- 使用者の入力イメージ[2] -->
+<div>
+    <div>最初は石、じゃんけんぽん！</div>
+    <div>
+        <!-- 使用者の選択： はさみ -->
+        <img id="input_img_scissors" src="human_scissors.gif" width="100px" height="100px"
+             onclick="test.makeTurn('scissors')">
+
+        <!-- 使用者の選択： ぐう -->
+        <img id="input_img_rock" src="human_rock.gif" width="100px" height="100px"
+             onclick="test.makeTurn('rock')">
+
+        <!-- 使用者の選択： ぱあ -->
+        <img id="input_img_paper" src="human_paper.gif" width="100px" height="100px"
+             onclick="test.makeTurn('paper')">
+
+        <!-- タイマー、スタット -->
+        <img src="gamestart.png" width="150px" height="80px"
+             onclick="test.startGame()" style="margin-left: 300px;">
+
+        <!-- タイマー、終了 -->
+        <img src="finishgame.png" width="150px" height="80px"
+             onclick="test.stopGame()">
+    </div>
+</div>
+
+<!-- 使用者 : 選択した "じゃん挙"のイメージ [3] -->
+<div id="human" class="div_base">
+    <div id="human_status" class="status"></div>
+    <div class="title_img">Human</div>
+    <div id="human_img" class="human_img"></div>
+</div>
+
+<!-- VSのイメージ[4] -->
+<div class="div_base"><img src="vs.gif"></div>
+
+<!-- コンピューター : 選択した ”じゃん挙”のイメージ[5] -->
+<div id="computer" class="div_base">
+    <div id="computer_status" class="status"></div>
+    <div class="title_img">Computer</div>
+    <div id="computer_img" class="computer_img"></div>
+</div>
+
+<!-- 結果の画面 [6] -->
+<div id="result_div" class="div_with_whole_width">
+</div>
+
+<!-- Timer [7]-->
+<div id="timer_div" class="div_with_whole_width"></div>
+<script>
+//計6つのオブジェクトが生成にならなければならない。
+//人間オブジェクトに、じゃんけんオブジェクト3個、コンピューターオブジェクトに、じゃんけんオブジェクト3つ
+//最初の因子の値、じゃんけん関連因子
+//二番目の因子の値true:コンピュータ、false:人
+
+
+    function RockPaperScissors(argTypeRps, argIsComputer) {//イメージを作る
+        this.typeOfRps = argTypeRps;// 現在のオブジェクトのrpsセーブ、文字列がセーブされます。
+        this.img_obj = document.createElement("img");
+
+        if(argIsComputer){// 使用者がコンピューターの場合
+            switch(argTypeRps){
+                case "rock":
+                   this.img_obj.src = "computer_rock.gif";
+                    break;
+                case "paper":
+                    this.img_obj.src = "computer_paper.gif";
+                    break;
+                default:
+                    this.img_obj.src = "computer_scissors.gif";
+                    break;
+            }
+        }else{//使用者が人間の場合
+            switch(argTypeRps){
+                case "rock":
+                    this.img_obj.src = "human_rock.gif";
+                    break;
+                case "paper":
+                    this.img_obj.src = "human_paper.gif";
+                    break;
+                default:
+                    this.img_obj.src = "human_scissors.gif";
+                    break;
+            }
+        }
+
+        this.valueOf = function(){//valueOfのメソッドをOVERRIDDING
+            return this.typeOfRps;
+        }
+
+    }
+
+
+    //Player's Class
+    function Player(argIsComputer){
+        this.rockPaperScissors = new Array();// はさみ、ぐう、ぱあのオブジェクトをセーブする配列
+        this.currentRSPValue; //現在選択された
+
+        //はさみ、ぐう、ぱあを配列にセーブする
+        this.rockPaperScissors.push(new RockPaperScissors("rock",argIsComputer));
+        this.rockPaperScissors.push(new RockPaperScissors("paper",argIsComputer));
+        this.rockPaperScissors.push(new RockPaperScissors("sissors",argIsComputer));
+
+        //privateの変数
+        var winCount = 0;
+        var loseCount = 0;
+        var drawCount = 0;
+
+        //変数をprivateに作って かく変数を増減するメソッド
+        this.increaseWinCount = function(){
+            winCount++;
+        };
+        this.increaseLoseCount = function(){
+
+           loseCount++;
+        };
+        this.increaseDrawCount = function(){
+            drawCount++;
+        };
+
+        //privateされた変数たちを引き出すためのmethods
+        this.getWinCount = function(){
+            return winCount;
+        };
+        this.getLoseCount = function(){
+            return loseCount;
+        };
+        this.getDrawCount = function(){
+            return drawCount;
+        };
+
+        //じゃんげんぽの結果をしょきかのメソッド
+        this.setToZeroForWinLoseDrawCount = function(){
+            winCount = 0;
+            loseCount = 0;
+            drawCount = 0;
+        };
+
+        //コンピューターが選択することをランダムでするようにするメソッド
+        this.getRPS = function(){
+           return this.currentRSPValue = this.rockPaperScissors[parseInt(Math.random()*3)];
+        };
+
+        //人が出したことを保存するメソッド
+        this.setRPS = function(argRPS){
+            //argRPSは「rock,paper,scissors」の文字列
+            switch(argRPS){
+                case "rock":
+                    this.currentRSPValue = this.rockPaperScissors[0];
+                    break;
+                case "paper":
+                    this.currentRSPValue = this.rockPaperScissors[1];
+                    break;
+                default:
+                    this.currentRSPValue = this.rockPaperScissors[2];
+                    break;
+            }
+
+            return this.currentRSPValue;
+        };
+
+
+    }
+
+    //ゲームの全体の流れを管理するクラス
+    function RPSGame() {
+
+        this.playerHuman = new Player(false);// 人のプレーヤーのオブジェクト
+        this.playerComputer = new Player(true);// コンピュータのプレイヤーのオブジェクト
+
+        var timer_div_obj = document.getElementById("timer_div");
+        this.rpsTimer = new timer(timer_div_obj);//Timerのオブジェクト
+
+        var color_change_arr = ["blue","red","black"];//色の文字列を保存した配列
+
+        this.status_bar_update = function(argStatus,argIsComputer,argObj){
+            //argStatus : 「win,lose,draw」文字列
+            //argIsComputer : true:コンピューター, false :人
+            //argObj: 該当のプレーヤーの戦績を現わす : これは文字列に送ってくる
+
+            //人とコンピューターの戦績部分持ってくる
+            var human_change = document.getElementById("human_status");
+            var computer_change = document.getElementById("computer_status");
+
+            //人、コンピューターを区分して戦績を出力及びbackgroundColor変更
+            if(argIsComputer){
+                switch(argStatus){
+                    case "win":
+                        computer_change.style.backgroundColor=color_change_arr[0];
+                        computer_change.innerHTML=argObj;
+                        break;
+
+                    case "lose":
+                        computer_change.style.backgroundColor=color_change_arr[1];
+                        computer_change.innerHTML=argObj;
+                        break;
+
+                    default:
+                        computer_change.style.backgroundColor=color_change_arr[2];
+                        computer_change.innerHTML=argObj;
+                        break;
+                }
+            }else{
+                switch(argStatus){
+                    case "win":
+                        human_change.style.backgroundColor=color_change_arr[0];
+                        human_change.innerHTML=argObj;
+                        break;
+
+                    case "lose":
+                        human_change.style.backgroundColor=color_change_arr[1];
+                        human_change.innerHTML=argObj;
+                        break;
+
+                    default:
+                        human_change.style.backgroundColor=color_change_arr[2];
+                        human_change.innerHTML=argObj;
+                        break;
+                }
+            }
+        };
+
+        //ゲーム開始&&勝率初期化&&タイマースタート
+        this.startGame = function(){
+            this.playerHuman.setToZeroForWinLoseDrawCount();
+            this.playerComputer.setToZeroForWinLoseDrawCount();
+
+            //タイマースタート
+            this.rpsTimer.startTime();
+        };
+
+        //ゲーム終了:タイマー終了
+        this.stopGame = function(){
+            this.rpsTimer.stopTimer();
+        };
+
+        //ゲーム開始されれば、実行されるメソッド
+        this.makeTurn = function(argRpsOfHuman){
+             var player_rps = this.playerHuman.setRPS(argRpsOfHuman);
+             var computer_rps = this.playerComputer.getRPS();
+             var human_img_obj = document.getElementById("human_img");
+             var computer_img_obj = document.getElementById("computer_img");
+             var result_div_obj = document.getElementById("result_div");
+             var human_status,computer_status;//使用者、コンピューター勝敗を保存する変数
+             var human_status_count,computer_status_count;//使用者、コンピューター勝率を保存する変数
+
+
+
+            //イメージの変更
+            //使用者のイメージ追加
+            if(human_img_obj.firstElementChild != null){
+                human_img_obj.removeChild(human_img_obj.firstElementChild);
+            }
+            human_img_obj.appendChild(player_rps.img_obj);
+
+            //コンピューターのイメージ追加
+            if(computer_img_obj.firstElementChild != null){
+                computer_img_obj.removeChild(computer_img_obj.firstElementChild);
+            }
+            computer_img_obj.appendChild(computer_rps.img_obj);
+
+
+            //勝負判別&&、全面的計算switch文
+            switch(argRpsOfHuman){
+                case "rock":
+                        switch(computer_rps.valueOf())
+                        {
+                            case "rock":
+                                this.playerHuman.increaseDrawCount();
+                                this.playerComputer.increaseDrawCount();
+                                human_status = "draw";
+                                computer_status ="draw";
+                                break;
+                            case "paper":
+                                this.playerHuman.increaseLoseCount();
+                                this.playerComputer.increaseWinCount();
+                                human_status = "lose";
+                                computer_status ="win";
+                                break;
+                            default:
+                                this.playerHuman.increaseWinCount();
+                                this.playerComputer.increaseLoseCount();
+                                human_status = "win";
+                                computer_status ="lose";
+                                break;
+                        }
+                    human_status_count = this.playerHuman.getWinCount()+"勝 "+this.playerHuman.getDrawCount()+"分け  "+this.playerHuman.getLoseCount()+"敗";
+                    computer_status_count = this.playerComputer.getWinCount()+"勝 "+this.playerComputer.getDrawCount()+"分け  "+this.playerComputer.getLoseCount()+"敗";
+                    break;
+                case "paper":
+                    switch(computer_rps.valueOf())
+                    {
+                        case "rock":
+                            this.playerHuman.increaseWinCount();
+                            this.playerComputer.increaseLoseCount();
+                            human_status = "win";
+                            computer_status ="lose";
+                            break;
+                        case "paper":
+                            this.playerHuman.increaseDrawCount();
+                            this.playerComputer.increaseDrawCount();
+                            human_status = "draw";
+                            computer_status ="draw";
+                            break;
+                        default:
+                            this.playerHuman.increaseLoseCount();
+                            this.playerComputer.increaseWinCount();
+                            human_status = "lose";
+                            computer_status ="win";
+                            break;
+                    }
+                    human_status_count = this.playerHuman.getWinCount()+"勝 "+this.playerHuman.getDrawCount()+"敗 "+this.playerHuman.getLoseCount()+"敗";
+                    computer_status_count = this.playerComputer.getWinCount()+"勝 "+this.playerComputer.getDrawCount()+"敗 "+this.playerComputer.getLoseCount()+"敗";
+                    break;
+                default:
+                    switch(computer_rps.valueOf())
+                    {
+                        case "rock":
+                            this.playerHuman.increaseLoseCount();
+                            this.playerComputer.increaseWinCount();
+                            human_status = "lose";
+                            computer_status ="win";
+                            break;
+                        case "paper":
+                            this.playerHuman.increaseWinCount();
+                            this.playerComputer.increaseLoseCount();
+                            human_status = "win";
+                            computer_status ="lose";
+                            break;
+                        default:
+                            this.playerHuman.increaseDrawCount();
+                            this.playerComputer.increaseDrawCount();
+                            human_status = "draw";
+                            computer_status ="draw";
+                            break;
+                    }
+                    human_status_count = this.playerHuman.getWinCount()+"勝 "+this.playerHuman.getDrawCount()+"敗 "+this.playerHuman.getLoseCount()+"敗";
+                    computer_status_count = this.playerComputer.getWinCount()+"勝 "+this.playerComputer.getDrawCount()+"敗 "+this.playerComputer.getLoseCount()+"敗";
+                    break;
+            }
+
+            //　競技の状況版アップデート
+            this.status_bar_update(human_status,false,human_status_count);
+            this.status_bar_update(computer_status,true,computer_status_count);
+
+            //現ゲーム結果の保存
+            switch(human_status){
+                case "win":
+                result_div_obj.style.color=color_change_arr[0];
+                    break;
+                case "lose":
+                    result_div_obj.style.color=color_change_arr[1];
+                    break;
+                default:
+                    result_div_obj.style.color = color_change_arr[2];
+            }
+
+            //現ゲーム結果の出力
+            result_div_obj.innerHTML=human_status;
+        };
+
+    }
+
+    //timerクラス
+    function timer(argDivObj) {
+        //タイマークラスでは:分:初めの形式で出力するタイマー機能を提供
+
+        var viewTime;
+        var count=0; //時間を計算するための変数
+        var clickCount=0; //スタートボタンをクリックした数を保存
+
+        this.startTime = function(){//타이머 시작
+            if(clickCount<1) //중복 클릭효과 방지
+                viewTime = setInterval(this.update,1);
+            clickCount++;
+        };
+        this.stopTimer = function(){//タイマー終了
+            clearInterval(viewTime);
+            count=0; //時間を初期化
+            clickCount=0; //クリックカウント初期化
+        };
+        this.update = function(){//タイマーアップデート
+            var hour = parseInt(count/3600); //時
+            var min = parseInt((count%3600)/60); //分
+            var sec = parseInt(count%60); //秒
+            argDivObj.innerHTML=hour + " :" + min+" :" + sec; //時間を表示
+            count++;
+        };
+    }
+
+    var test = new RPSGame();
+</script>
+
+</body>
+</html>
